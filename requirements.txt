@@ -1,0 +1,3 @@
+# Librerias que necesita este proyecto.
+# Instalar con:  pip install -r requirements.txt
+openpyxl>=3.1

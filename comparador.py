@@ -7,10 +7,12 @@ Compara el mismo dato calculado en dos versiones (V7 vs V8) en dos niveles:
 
 Uso:
     python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv
+    python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv --excel reportes/comparacion.xlsx
 """
 
 import argparse
 import csv
+import os
 import sys
 from collections import defaultdict
 
@@ -24,8 +26,7 @@ def cargar_filas(ruta):
 def agrupar(filas, columnas_clave):
     """Suma el monto agrupando por las columnas indicadas.
 
-    Devuelve un dict {clave: suma_del_monto}, donde la clave es una tupla
-    con los valores de 'columnas_clave'. La misma funcion sirve para ambos niveles:
+    Devuelve un dict {clave: suma_del_monto}. La misma funcion sirve para ambos niveles:
       - totales: columnas_clave = ("empresa", "concepto")
       - detalle: columnas_clave = ("empresa", "cuenta", "concepto")
     """
@@ -40,7 +41,6 @@ def comparar(datos_v7, datos_v8):
     """Compara dos dicts {clave: monto} y devuelve las diferencias.
 
     Cada diferencia es (clave, monto_v7, monto_v8); None si falta en un lado.
-    Es generica: no le importa si la clave es de totales o de detalle.
     """
     diferencias = []
     for clave in sorted(set(datos_v7) | set(datos_v8)):
@@ -66,7 +66,7 @@ def formatear_monto(valor):
 
 
 def imprimir_seccion(titulo, columnas_clave, diferencias):
-    """Imprime una seccion del reporte como tabla Markdown."""
+    """Imprime una seccion del reporte como tabla Markdown en la consola."""
     print(f"\n## {titulo}")
     if not diferencias:
         print("OK: sin diferencias.")
@@ -83,41 +83,80 @@ def imprimir_seccion(titulo, columnas_clave, diferencias):
         )
 
 
+def escribir_excel(ruta_salida, secciones):
+    """Guarda el reporte en un Excel, con una hoja por seccion.
+
+    'secciones' es la lista de dicts que arma main(): cada uno trae el nombre de
+    la hoja, las columnas clave y las diferencias.
+    """
+    # Import perezoso: openpyxl solo hace falta si el usuario pidio --excel.
+    # Asi el modo consola sigue funcionando sin instalar nada.
+    from openpyxl import Workbook
+
+    libro = Workbook()
+    libro.remove(libro.active)  # quita la hoja vacia que viene por defecto
+    for seccion in secciones:
+        hoja = libro.create_sheet(title=seccion["hoja"])
+        hoja.append(list(seccion["columnas_clave"]) + ["V7", "V8", "tipo"])
+        for clave, monto_v7, monto_v8 in seccion["diferencias"]:
+            hoja.append(
+                list(clave) + [monto_v7, monto_v8, tipo_diferencia(monto_v7, monto_v8)]
+            )
+
+    carpeta = os.path.dirname(ruta_salida)
+    if carpeta:
+        os.makedirs(carpeta, exist_ok=True)  # crea la carpeta de salida si no existe
+    libro.save(ruta_salida)
+    print(f"\nReporte Excel guardado en: {ruta_salida}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Compara V7 vs V8 por totales y por detalle de fila."
     )
     parser.add_argument("archivo_v7", help="CSV con los datos de V7")
     parser.add_argument("archivo_v8", help="CSV con los datos de V8")
+    parser.add_argument(
+        "--excel",
+        metavar="RUTA",
+        help="Ademas del reporte en consola, guarda un Excel en la ruta indicada",
+    )
     args = parser.parse_args()
 
     filas_v7 = cargar_filas(args.archivo_v7)
     filas_v8 = cargar_filas(args.archivo_v8)
 
-    # Nivel 1: totales por empresa + concepto (la foto grande).
-    dif_totales = comparar(
-        agrupar(filas_v7, ("empresa", "concepto")),
-        agrupar(filas_v8, ("empresa", "concepto")),
-    )
-    imprimir_seccion(
-        "Cuadre por totales (empresa / concepto)",
-        ["empresa", "concepto"],
-        dif_totales,
-    )
+    # Cada seccion define su nivel de comparacion en un solo lugar.
+    secciones = [
+        {
+            "titulo": "Cuadre por totales (empresa / concepto)",
+            "hoja": "Totales",
+            "columnas_clave": ["empresa", "concepto"],
+            "diferencias": comparar(
+                agrupar(filas_v7, ("empresa", "concepto")),
+                agrupar(filas_v8, ("empresa", "concepto")),
+            ),
+        },
+        {
+            "titulo": "Detalle fila a fila (empresa / cuenta / concepto)",
+            "hoja": "Detalle",
+            "columnas_clave": ["empresa", "cuenta", "concepto"],
+            "diferencias": comparar(
+                agrupar(filas_v7, ("empresa", "cuenta", "concepto")),
+                agrupar(filas_v8, ("empresa", "cuenta", "concepto")),
+            ),
+        },
+    ]
 
-    # Nivel 2: detalle por empresa + cuenta + concepto (el porque de cada diferencia).
-    dif_detalle = comparar(
-        agrupar(filas_v7, ("empresa", "cuenta", "concepto")),
-        agrupar(filas_v8, ("empresa", "cuenta", "concepto")),
-    )
-    imprimir_seccion(
-        "Detalle fila a fila (empresa / cuenta / concepto)",
-        ["empresa", "cuenta", "concepto"],
-        dif_detalle,
-    )
+    for seccion in secciones:
+        imprimir_seccion(seccion["titulo"], seccion["columnas_clave"], seccion["diferencias"])
+
+    if args.excel:
+        escribir_excel(args.excel, secciones)
 
     # Sale con 1 si hubo cualquier diferencia (util para automatizar con una GitHub Action).
-    sys.exit(1 if (dif_totales or dif_detalle) else 0)
+    hay_diferencias = any(seccion["diferencias"] for seccion in secciones)
+    sys.exit(1 if hay_diferencias else 0)
 
 
 if __name__ == "__main__":
