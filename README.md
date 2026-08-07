@@ -37,12 +37,23 @@ que el comparador tenga algo que encontrar:
 - una cuenta que esta **solo en V8** (aparecio de mas),
 - un concepto con **monto distinto** entre V7 y V8.
 
-## Uso (previsto)
+## Uso
 
 ```bash
+# Comparar dos CSV locales (datos de ejemplo)
 python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv
+
+# Ademas, generar un Excel
+python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv --excel reportes/comparacion.xlsx
+
+# Comparar ejecutando consultas en Oracle (uso local, requiere .env)
+python comparador.py consulta_v7.sql consulta_v8.sql
 ```
+
+La fuente se decide por la extension: `.csv` lee un archivo local; `.sql` ejecuta
+ese SELECT en Oracle (que debe devolver las columnas empresa, cuenta, concepto, monto).
 
 ## Estado
 
-En construccion. Etapa actual: esqueleto del proyecto y datos de ejemplo.
+Funcional: comparacion por totales y detalle, reporte Excel opcional, y lectura
+desde CSV o desde Oracle (via .env local).

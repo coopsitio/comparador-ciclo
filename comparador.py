@@ -8,6 +8,11 @@ Compara el mismo dato calculado en dos versiones (V7 vs V8) en dos niveles:
 Uso:
     python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv
     python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv --excel reportes/comparacion.xlsx
+
+Las fuentes pueden ser archivos .csv (locales) o .sql (se ejecutan en Oracle,
+leyendo las credenciales desde un archivo .env local; ver .env.example):
+
+    python comparador.py consulta_v7.sql consulta_v8.sql
 """
 
 import argparse
@@ -23,6 +28,39 @@ def cargar_filas(ruta):
         return list(csv.DictReader(archivo))
 
 
+def cargar_desde_oracle(sql):
+    """Ejecuta un SELECT en Oracle y devuelve las filas como lista de dicts.
+
+    El SELECT debe devolver las columnas: empresa, cuenta, concepto, monto.
+    Las credenciales se leen del archivo .env local (NUNCA del codigo ni del repo).
+    """
+    # Imports perezosos: estas librerias solo hacen falta si se usa una fuente .sql.
+    import oracledb
+    from dotenv import load_dotenv
+
+    load_dotenv()  # carga las variables definidas en el archivo .env al entorno
+    usuario = os.environ["ORACLE_USER"]
+    clave = os.environ["ORACLE_PASSWORD"]
+    dsn = os.environ["ORACLE_DSN"]
+
+    with oracledb.connect(user=usuario, password=clave, dsn=dsn) as conexion:
+        with conexion.cursor() as cursor:
+            cursor.execute(sql)
+            columnas = [descripcion[0].lower() for descripcion in cursor.description]
+            return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+
+def cargar_fuente(ruta):
+    """Carga una fuente de datos decidiendo por su extension:
+      - .sql -> ejecuta el SELECT en Oracle
+      - cualquier otra (.csv) -> lee el archivo local
+    """
+    if ruta.lower().endswith(".sql"):
+        with open(ruta, encoding="utf-8") as archivo:
+            return cargar_desde_oracle(archivo.read())
+    return cargar_filas(ruta)
+
+
 def agrupar(filas, columnas_clave):
     """Suma el monto agrupando por las columnas indicadas.
 
@@ -32,7 +70,7 @@ def agrupar(filas, columnas_clave):
     """
     acumulado = defaultdict(float)
     for fila in filas:
-        clave = tuple(fila[col] for col in columnas_clave)
+        clave = tuple(str(fila[col]) for col in columnas_clave)
         acumulado[clave] += float(fila["monto"])
     return acumulado
 
@@ -114,8 +152,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Compara V7 vs V8 por totales y por detalle de fila."
     )
-    parser.add_argument("archivo_v7", help="CSV con los datos de V7")
-    parser.add_argument("archivo_v8", help="CSV con los datos de V8")
+    parser.add_argument("archivo_v7", help="Fuente V7: archivo .csv local o .sql (Oracle)")
+    parser.add_argument("archivo_v8", help="Fuente V8: archivo .csv local o .sql (Oracle)")
     parser.add_argument(
         "--excel",
         metavar="RUTA",
@@ -123,8 +161,8 @@ def main():
     )
     args = parser.parse_args()
 
-    filas_v7 = cargar_filas(args.archivo_v7)
-    filas_v8 = cargar_filas(args.archivo_v8)
+    filas_v7 = cargar_fuente(args.archivo_v7)
+    filas_v8 = cargar_fuente(args.archivo_v8)
 
     # Cada seccion define su nivel de comparacion en un solo lugar.
     secciones = [

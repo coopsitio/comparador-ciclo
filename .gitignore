@@ -4,6 +4,9 @@
 secrets/
 credenciales*
 
+# ---- Area de pruebas privada (queries reales, scratch) ----
+local/
+
 # ---- Salidas generadas (no se versionan) ----
 reportes/
 *.xlsx
