@@ -49,9 +49,11 @@ Se decide por la extension.
    python comparador.py <fuente_v7.csv> <fuente_v8.csv> --excel reportes/comparacion.xlsx
    ```
 
-4. Comparar ejecutando consultas en Oracle (requiere un archivo `.env` local con
-   `ORACLE_USER`, `ORACLE_PASSWORD`, `ORACLE_DSN`; ver `.env.example`). Cada `.sql`
-   debe devolver las columnas `empresa, cuenta, concepto, monto`:
+4. Comparar ejecutando consultas en Oracle. Requiere un `.env` local con las
+   credenciales por ambiente (`ORACLE_V7_*` y `ORACLE_V8_*`) y, para V7 (Oracle 11.2),
+   `ORACLE_CLIENT_LIB` apuntando a un Instant Client 19; ver `.env.example`. La
+   posicion decide el ambiente: el primer argumento va a V7, el segundo a V8. Cada
+   `.sql` debe devolver las columnas `empresa, cuenta, concepto, monto`:
 
    ```bash
    python comparador.py <consulta_v7.sql> <consulta_v8.sql>

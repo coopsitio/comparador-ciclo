@@ -28,20 +28,47 @@ def cargar_filas(ruta):
         return list(csv.DictReader(archivo))
 
 
-def cargar_desde_oracle(sql):
-    """Ejecuta un SELECT en Oracle y devuelve las filas como lista de dicts.
+_cliente_oracle_iniciado = False
+
+
+def _asegurar_cliente_oracle():
+    """Inicia el modo 'thick' (Instant Client) si ORACLE_CLIENT_LIB esta definido.
+
+    Es necesario para conectarse a V7 (Oracle 11.2), que el modo 'thin' NO soporta
+    (da DPY-3010). El Instant Client 19 sirve para ambos: V7 (11.2) y V8 (19c).
+    Se llama antes de cualquier conexion y solo se inicia una vez por proceso.
+    """
+    global _cliente_oracle_iniciado
+    if _cliente_oracle_iniciado:
+        return
+    import oracledb
+
+    lib = os.environ.get("ORACLE_CLIENT_LIB")
+    if lib:
+        oracledb.init_oracle_client(lib_dir=lib)
+    _cliente_oracle_iniciado = True
+
+
+def cargar_desde_oracle(sql, lado):
+    """Ejecuta un SELECT en la base del ambiente indicado ('v7' o 'v8').
 
     El SELECT debe devolver las columnas: empresa, cuenta, concepto, monto.
-    Las credenciales se leen del archivo .env local (NUNCA del codigo ni del repo).
+    Las credenciales se leen del .env, con prefijo segun el ambiente:
+      ORACLE_V7_USER / ORACLE_V7_PASSWORD / ORACLE_V7_DSN   (produccion)
+      ORACLE_V8_USER / ORACLE_V8_PASSWORD / ORACLE_V8_DSN   (pruebas)
+    (NUNCA en el codigo ni en el repo; el .env esta en .gitignore.)
     """
     # Imports perezosos: estas librerias solo hacen falta si se usa una fuente .sql.
     import oracledb
     from dotenv import load_dotenv
 
-    load_dotenv()  # carga las variables definidas en el archivo .env al entorno
-    usuario = os.environ["ORACLE_USER"]
-    clave = os.environ["ORACLE_PASSWORD"]
-    dsn = os.environ["ORACLE_DSN"]
+    load_dotenv()               # carga las variables del .env al entorno
+    _asegurar_cliente_oracle()  # modo thick si hace falta (para V7 11.2)
+
+    prefijo = f"ORACLE_{lado.upper()}_"
+    usuario = os.environ[prefijo + "USER"]
+    clave = os.environ[prefijo + "PASSWORD"]
+    dsn = os.environ[prefijo + "DSN"]
 
     with oracledb.connect(user=usuario, password=clave, dsn=dsn) as conexion:
         with conexion.cursor() as cursor:
@@ -50,14 +77,14 @@ def cargar_desde_oracle(sql):
             return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
 
 
-def cargar_fuente(ruta):
+def cargar_fuente(ruta, lado):
     """Carga una fuente de datos decidiendo por su extension:
-      - .sql -> ejecuta el SELECT en Oracle
+      - .sql -> ejecuta el SELECT en Oracle del ambiente 'lado' ('v7' o 'v8')
       - cualquier otra (.csv) -> lee el archivo local
     """
     if ruta.lower().endswith(".sql"):
         with open(ruta, encoding="utf-8") as archivo:
-            return cargar_desde_oracle(archivo.read())
+            return cargar_desde_oracle(archivo.read(), lado)
     return cargar_filas(ruta)
 
 
@@ -161,8 +188,8 @@ def main():
     )
     args = parser.parse_args()
 
-    filas_v7 = cargar_fuente(args.archivo_v7)
-    filas_v8 = cargar_fuente(args.archivo_v8)
+    filas_v7 = cargar_fuente(args.archivo_v7, "v7")
+    filas_v8 = cargar_fuente(args.archivo_v8, "v8")
 
     # Cada seccion define su nivel de comparacion en un solo lugar.
     secciones = [
