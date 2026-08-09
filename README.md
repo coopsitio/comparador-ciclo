@@ -75,6 +75,29 @@ el proceso de Python; para ciclos completos conviene el patron asincrono / Node.
 **Esquema:** V7 y V8 usan un esquema por empresa (ej. `CHILQUIN`). En la query,
 prefija la tabla (`CHILQUIN.CARGOS`) o fija `ALTER SESSION SET CURRENT_SCHEMA`.
 
+## Comparar un CICLO COMPLETO con un comando (COMPARAR_CICLO.bat)
+
+Para comparar un ciclo entero (por tarifa x concepto) entre V7 y V8 con **los mismos
+criterios**, en un solo paso:
+
+```bat
+COMPARAR_CICLO.bat 15492
+COMPARAR_CICLO.bat 15281 CHILQUIN
+```
+
+Hace: genera la query desde `consultas_ejemplo/cargos_por_tarifa.sql` (reemplaza
+esquema y pefa), vuelca cada ambiente a CSV y genera `local/comparacion_<pefa>.xlsx`.
+
+**Por que un `.bat` y Node (esquiva el antivirus):** en este equipo el antivirus mata
+`python.exe` cuando queda esperando una query Oracle larga (aunque la espere un
+proceso hijo). Solucion: el orquestador es un `.bat` (`cmd.exe` puede esperar sin
+morir) y los volcados usan **Node** (`node.exe` no lo caza; en modo thick conecta a
+V7=11.2 y a V8=19c). La comparacion de los dos CSV la hace Python (instantanea, sin BD).
+
+Requiere en el `.env`: credenciales `ORACLE_V7_*` / `ORACLE_V8_*`, `ORACLE_CLIENT_LIB`
+(Instant Client 19, para el modo thick) y `ORACLE_NODE_ORACLEDB` (ruta al modulo
+`oracledb` de Node). Ver `.env.example`.
+
 ## Estado
 
 Funcional y probado contra V7 (produccion) y V8 (pruebas) con una query real de

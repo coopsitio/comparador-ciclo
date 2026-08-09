@@ -73,9 +73,18 @@ cuadra (util para automatizar con una GitHub Action).
   requiere modo thick: fija `ORACLE_CLIENT_LIB` a un Instant Client 19.
 - La query debe devolver `empresa, cuenta, concepto, monto` y prefijar el esquema
   de empresa (ej. `CHILQUIN.CARGOS`). Ver `consultas_ejemplo/cargos_por_cuenta.sql`.
-- Acotar las queries (pocas cuentas / un concepto) para que corran rapido; contra
-  queries largas el antivirus puede matar Python (usar async/Node para ciclos completos).
 - Queries reales y salidas van en `local/` (gitignored): nunca subir datos reales.
+
+## Ciclo completo: COMPARAR_CICLO.bat
+
+- `COMPARAR_CICLO.bat <pefa> [esquema]` compara un ciclo entero (tarifa x concepto)
+  entre V7 y V8 y genera `local/comparacion_<pefa>.xlsx`.
+- **Antivirus:** en este equipo mata `python.exe` esperando queries Oracle largas
+  (aunque sea un hijo). Por eso el orquestador es un `.bat` (cmd espera sin morir) y
+  los volcados (`dump_oracle.js`) usan **Node** en modo thick (V7 11.2 y V8 19c);
+  `node.exe` no lo caza. El compare de CSV lo hace Python (instantaneo).
+- `.env` necesita `ORACLE_CLIENT_LIB` (Instant Client 19) y `ORACLE_NODE_ORACLEDB`.
+- `dump_oracle.py` es un volcador Python alternativo (thick), por si Node no aplica.
 
 ## Pendiente / roadmap
 
