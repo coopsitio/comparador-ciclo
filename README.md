@@ -52,8 +52,31 @@ python comparador.py consulta_v7.sql consulta_v8.sql
 
 La fuente se decide por la extension: `.csv` lee un archivo local; `.sql` ejecuta
 ese SELECT en Oracle (que debe devolver las columnas empresa, cuenta, concepto, monto).
+El primer argumento se ejecuta en V7 y el segundo en V8 (credenciales por ambiente
+en el `.env`; ver `.env.example`).
+
+## Comparar V7 vs V8 con queries reales
+
+1. Escribe tu consulta (una por ambiente) tomando como base
+   `consultas_ejemplo/cargos_por_cuenta.sql`. Debe devolver
+   `empresa, cuenta, concepto, monto`.
+2. Guardala en la carpeta `local/` (esta en `.gitignore`: no se suben ids ni datos
+   reales, y el repo sigue siendo publico).
+3. Ejecuta:
+
+   ```bash
+   python comparador.py local/v7.sql local/v8.sql --excel local/comparacion.xlsx
+   ```
+
+**Rendimiento / antivirus:** acota la query (pocas cuentas, un concepto, un rango)
+para que corra en pocos segundos. Contra queries largas el antivirus puede matar
+el proceso de Python; para ciclos completos conviene el patron asincrono / Node.
+
+**Esquema:** V7 y V8 usan un esquema por empresa (ej. `CHILQUIN`). En la query,
+prefija la tabla (`CHILQUIN.CARGOS`) o fija `ALTER SESSION SET CURRENT_SCHEMA`.
 
 ## Estado
 
-Funcional: comparacion por totales y detalle, reporte Excel opcional, y lectura
-desde CSV o desde Oracle (via .env local).
+Funcional y probado contra V7 (produccion) y V8 (pruebas) con una query real de
+CARGOS: comparacion por totales y detalle, reporte Excel opcional, y lectura desde
+CSV o desde Oracle (via `.env` local, credenciales por ambiente).

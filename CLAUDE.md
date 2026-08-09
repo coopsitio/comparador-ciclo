@@ -66,8 +66,17 @@ cuadra (util para automatizar con una GitHub Action).
 - Un commit = un cambio con sentido, con mensaje en imperativo.
 - Integrar a `main` via Pull Request.
 
+## Oracle / dos ambientes
+
+- Fuentes `.sql` se ejecutan en Oracle. El primer argumento va a V7 y el segundo a V8.
+- Credenciales por ambiente en `.env`: `ORACLE_V7_*` y `ORACLE_V8_*`. V7 (Oracle 11.2)
+  requiere modo thick: fija `ORACLE_CLIENT_LIB` a un Instant Client 19.
+- La query debe devolver `empresa, cuenta, concepto, monto` y prefijar el esquema
+  de empresa (ej. `CHILQUIN.CARGOS`). Ver `consultas_ejemplo/cargos_por_cuenta.sql`.
+- Acotar las queries (pocas cuentas / un concepto) para que corran rapido; contra
+  queries largas el antivirus puede matar Python (usar async/Node para ciclos completos).
+- Queries reales y salidas van en `local/` (gitignored): nunca subir datos reales.
+
 ## Pendiente / roadmap
 
-- Modo Oracle: leer de la base via `.env` en vez de CSV (python-oracledb).
-- Empaquetar el comparador como Skill reutilizable.
-- GitHub Action que corra el comparador en cada PR.
+- GitHub Action que corra el comparador (con datos de ejemplo) en cada PR.
