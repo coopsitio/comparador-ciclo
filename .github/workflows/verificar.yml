@@ -1,0 +1,37 @@
+name: Verificar comparador
+
+# Corre en cada push y en cada Pull Request: valida que el comparador funciona
+# sobre los datos de ejemplo (ficticios). No toca ninguna base de datos real.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  comparador:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repo
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Ejecutar el comparador con datos de ejemplo
+        run: |
+          python comparador.py datos_ejemplo/v7.csv datos_ejemplo/v8.csv | tee salida.txt
+          code=${PIPESTATUS[0]}
+          echo "Codigo de salida: $code"
+          # 1 = encontro diferencias (esperado con los datos de ejemplo).
+          # 0 seria "todo cuadra" (no deberia pasar aqui); >1 = error real.
+          test "$code" -eq 1
+
+      - name: Verificar que detecta las diferencias sembradas
+        run: |
+          grep -q "Cuadre por totales" salida.txt
+          grep -q "Detalle fila a fila" salida.txt
+          grep -q "LITORAL | 2002 | 1036 | 9,500 | (no existe) | solo en V7" salida.txt
+          grep -q "LITORAL | 2003 | 1036 | (no existe) | 7,000 | solo en V8" salida.txt
+          echo "OK: el comparador detecta las diferencias esperadas."
