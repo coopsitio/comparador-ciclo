@@ -106,10 +106,15 @@ Para pesquisar fallas en varias dimensiones a la vez:
 COMPARAR_SUITE.bat 15492
 ```
 
-Corre TODAS las plantillas de `consultas_suite/` (facturacion por tarifa/concepto,
-numero de productos por tarifa, cargos fijos por tarifa, consumo medido por tarifa,
-...) entre V7 y V8 y deja un Excel por dimension en `local/suite_<pefa>/`. Para
-agregar una dimension, basta con dejar otra plantilla `.sql` en `consultas_suite/`.
+Corre TODAS las plantillas de `consultas_suite/` entre V7 y V8 y deja un Excel por
+dimension en `local/suite_<pefa>/`. Para agregar una dimension, basta con dejar otra
+plantilla `.sql` en `consultas_suite/`. Dimensiones incluidas:
+
+- **Datos:** facturacion por tarifa/concepto, facturacion global por concepto,
+  numero de productos por tarifa, cargos fijos por tarifa, cuentas de cobro por
+  tarifa, consumo medido por tarifa, consumo por tipo, estados de corte.
+- **Estructura (esquema):** tablas del esquema (detecta tablas que faltan en un
+  ambiente) y columnas de las tablas core (detecta columnas agregadas/quitadas).
 
 **Parametros por-ambiente:** las plantillas pueden usar `{NOMBRE}`, que se reemplaza
 por `ORACLE_<lado>_<NOMBRE>` del `.env`. Se usa para diferencias estructurales entre
