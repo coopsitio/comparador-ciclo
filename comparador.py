@@ -176,6 +176,13 @@ def escribir_excel(ruta_salida, secciones):
 
 
 def main():
+    # En Windows, al redirigir la salida a un archivo, los acentos pueden reventar
+    # con UnicodeEncodeError (cp1252). Forzamos UTF-8 tolerante.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
     parser = argparse.ArgumentParser(
         description="Compara V7 vs V8 por totales y por detalle de fila."
     )

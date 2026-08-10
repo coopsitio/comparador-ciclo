@@ -33,8 +33,11 @@ for %%F in ("%~dp0consultas_suite\*.sql") do (
   "%PY%" "%~dp0comparador.py" "%OUT%\v7_!NOM!.csv" "%OUT%\v8_!NOM!.csv" --excel "%OUT%\comp_!NOM!.xlsx" > "%OUT%\salida_!NOM!.txt"
 )
 
+echo === Reporte consolidado ===
+"%PY%" "%~dp0reporte_suite.py" --pefa %PEFA%
+
 echo.
-echo LISTO: resultados en %OUT%\
+echo LISTO: resultados en %OUT%\  (ver resumen_%PEFA%.xlsx)
 popd & endlocal & exit /b 0
 
 :err
