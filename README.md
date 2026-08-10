@@ -98,6 +98,24 @@ Requiere en el `.env`: credenciales `ORACLE_V7_*` / `ORACLE_V8_*`, `ORACLE_CLIEN
 (Instant Client 19, para el modo thick) y `ORACLE_NODE_ORACLEDB` (ruta al modulo
 `oracledb` de Node). Ver `.env.example`.
 
+## Suite multi-dimension (COMPARAR_SUITE.bat)
+
+Para pesquisar fallas en varias dimensiones a la vez:
+
+```bat
+COMPARAR_SUITE.bat 15492
+```
+
+Corre TODAS las plantillas de `consultas_suite/` (facturacion por tarifa/concepto,
+numero de productos por tarifa, cargos fijos por tarifa, consumo medido por tarifa,
+...) entre V7 y V8 y deja un Excel por dimension en `local/suite_<pefa>/`. Para
+agregar una dimension, basta con dejar otra plantilla `.sql` en `consultas_suite/`.
+
+**Parametros por-ambiente:** las plantillas pueden usar `{NOMBRE}`, que se reemplaza
+por `ORACLE_<lado>_<NOMBRE>` del `.env`. Se usa para diferencias estructurales entre
+versiones: p.ej. el servicio utility (`{SUBSERVE}`) es `2` en V7 y `47` en V8, asi
+la comparacion filtra el mismo universo en ambos.
+
 ## Estado
 
 Funcional y probado contra V7 (produccion) y V8 (pruebas) con una query real de

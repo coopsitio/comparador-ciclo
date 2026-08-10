@@ -51,6 +51,12 @@ function csvCell(v) {
   const esq = arg("--esquema"), pefa = arg("--pefa");
   if (esq) sql = sql.split("{ESQUEMA}").join(esq);
   if (pefa) sql = sql.split("{PEFA}").join(pefa);
+  // Parametros POR AMBIENTE: cualquier {NOMBRE} se reemplaza por ORACLE_<lado>_<NOMBRE>
+  // del .env. Ej.: {SUBSERVE} -> ORACLE_V7_SUBSERVE (=2) / ORACLE_V8_SUBSERVE (=47).
+  sql = sql.replace(/\{([A-Z_][A-Z0-9_]*)\}/g, (m, name) => {
+    const v = env[pref + name];
+    return v !== undefined ? v : m;
+  });
   sql = sql.replace(/;\s*$/, "");
 
   let con;

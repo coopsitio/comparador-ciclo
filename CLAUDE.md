@@ -86,6 +86,16 @@ cuadra (util para automatizar con una GitHub Action).
 - `.env` necesita `ORACLE_CLIENT_LIB` (Instant Client 19) y `ORACLE_NODE_ORACLEDB`.
 - `dump_oracle.py` es un volcador Python alternativo (thick), por si Node no aplica.
 
+## Suite multi-dimension
+
+- `COMPARAR_SUITE.bat <pefa> [esquema]` corre todas las plantillas de
+  `consultas_suite/` (una dimension cada una) entre V7 y V8 y deja un Excel por
+  dimension en `local/suite_<pefa>/`. Para agregar una dimension: dejar otra `.sql`.
+- **Parametros por-ambiente:** un `{NOMBRE}` en la plantilla se reemplaza por
+  `ORACLE_<lado>_<NOMBRE>` del `.env`. Estructural entre versiones: el utility
+  electrico (`{SUBSERVE}`) es `2` en V7 y `47` en V8 (columna SERVSUSC.SESUSERV);
+  filtrar por el asegura comparar el mismo universo.
+
 ## Pendiente / roadmap
 
 - GitHub Action que corra el comparador (con datos de ejemplo) en cada PR.
