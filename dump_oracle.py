@@ -30,15 +30,19 @@ def main():
     if lib:
         oracledb.init_oracle_client(lib_dir=lib)  # modo thick (para V7 11.2)
 
+    pref = f"ORACLE_{args.lado.upper()}_"
     with open(args.query, encoding="utf-8") as f:
         sql = f.read()
     if args.esquema:
         sql = sql.replace("{ESQUEMA}", args.esquema)
     if args.pefa:
         sql = sql.replace("{PEFA}", str(args.pefa))
+    # Parametros POR AMBIENTE: {NOMBRE} -> ORACLE_<lado>_<NOMBRE> del .env
+    # (ej. {SUBSERVE} -> ORACLE_V7_SUBSERVE=2 / ORACLE_V8_SUBSERVE=47).
+    import re
+    sql = re.sub(r"\{([A-Z_][A-Z0-9_]*)\}",
+                 lambda m: os.environ.get(pref + m.group(1), m.group(0)), sql)
     sql = sql.rstrip().rstrip(";")
-
-    pref = f"ORACLE_{args.lado.upper()}_"
     con = oracledb.connect(user=os.environ[pref + "USER"],
                            password=os.environ[pref + "PASSWORD"],
                            dsn=os.environ[pref + "DSN"])
