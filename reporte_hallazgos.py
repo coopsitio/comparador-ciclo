@@ -19,6 +19,17 @@ import html
 
 UMBRAL_RATIO = 1.05  # >5% de diferencia en el total se marca
 
+# Totales de control: cifras que "deben cuadrar" entre V7 y V8, con su tolerancia.
+# fmt: "int" (conteos/kWh) o "num" (2 decimales, tasas).
+CONTROLES = [
+    {"label": "N. de productos (utility)", "base": "02_productos_por_tarifa", "tol": 2.0, "fmt": "int"},
+    {"label": "N. de cargos fijos (1001)", "base": "03_cargo_fijo_por_tarifa", "tol": 2.0, "fmt": "int"},
+    {"label": "N. de cuentas de cobro", "base": "08_cuentas_cobro_por_tarifa", "tol": 2.0, "fmt": "int"},
+    {"label": "Consumo total (kWh, crudo)", "base": "04_consumo_medido_por_tarifa", "tol": 2.0, "fmt": "int"},
+    {"label": "Consumo diario (kWh/dia, NORMALIZADO)", "base": "10_consumo_diario_por_tarifa", "tol": 5.0, "fmt": "num"},
+    {"label": "Facturacion total ($)", "base": "06_facturacion_global_por_concepto", "tol": 2.0, "fmt": "int"},
+]
+
 
 def cargar(ruta):
     with open(ruta, newline="", encoding="utf-8") as f:
@@ -133,9 +144,38 @@ def main():
 
     h = [f"<style>{CSS}</style>",
          f"<h1>Reporte de hallazgos — Comparacion V7 vs V8</h1>",
-         f"<div class='sub'>Empresa {html.escape(args.empresa)} · Ciclo (pefa) {args.pefa} · {len(dims)} dimensiones revisadas</div>",
-         "<h2>Resumen ejecutivo</h2>",
-         "<table><tr><th>Dimension</th><th>Severidad</th><th># dif.</th><th>Hallazgo</th></tr>"]
+         f"<div class='sub'>Empresa {html.escape(args.empresa)} · Ciclo (pefa) {args.pefa} · {len(dims)} dimensiones revisadas</div>"]
+
+    # --- Panel de control (semaforo de totales) ---
+    by_base = {d["base"]: d["a"] for d in dims}
+    n_ok = 0
+    n_ctrl = 0
+    filas_ctrl = []
+    for c in CONTROLES:
+        a = by_base.get(c["base"])
+        if not a:
+            continue
+        n_ctrl += 1
+        t7, t8 = a["tot7"], a["tot8"]
+        pct = ((t8 - t7) / t7 * 100) if t7 else None
+        ok = pct is not None and abs(pct) <= c["tol"]
+        n_ok += 1 if ok else 0
+        cls, est = ("OK", "OK") if ok else ("ALTA", "DESVIACION")
+        f = (lambda v: f"{v:,.0f}") if c["fmt"] == "int" else (lambda v: f"{v:,.2f}")
+        pcttxt = f"{pct:+.1f}%" if pct is not None else "-"
+        filas_ctrl.append(f"<tr><td>{html.escape(c['label'])}</td>"
+                          f"<td class='num'>{f(t7)}</td><td class='num'>{f(t8)}</td>"
+                          f"<td class='num'>{pcttxt}</td><td class='num'>&plusmn;{c['tol']:.0f}%</td>"
+                          f"<td class='{cls}'>{est}</td></tr>")
+    if filas_ctrl:
+        h.append(f"<h2>Panel de control &mdash; {n_ok} de {n_ctrl} controles OK</h2>")
+        h.append("<table><tr><th>Control</th><th class='num'>V7</th><th class='num'>V8</th>"
+                 "<th class='num'>Dif %</th><th class='num'>Tol.</th><th>Estado</th></tr>")
+        h.extend(filas_ctrl)
+        h.append("</table>")
+
+    h.append("<h2>Resumen ejecutivo</h2>")
+    h.append("<table><tr><th>Dimension</th><th>Severidad</th><th># dif.</th><th>Hallazgo</th></tr>")
     for d in dims:
         h.append(f"<tr><td>{html.escape(d['nombre'])}</td>"
                  f"<td class='{d['sev']}'>{d['sev']}</td>"
